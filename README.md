@@ -1,0 +1,2 @@
+# End-to-End-Healthcare-ETL-Pipeline-using-Azure-Data-Factory-Databricks-and-Delta-Lake
+This project involves building a scalable ETL pipeline for healthcare data using Azure Data Factory for orchestration, Azure Data Lake for storage, and Azure Databricks for data processing with Delta Lake. Data is further processed into different layers (Bronze, Silver &amp; Gold Layer) using medallion architecture.
