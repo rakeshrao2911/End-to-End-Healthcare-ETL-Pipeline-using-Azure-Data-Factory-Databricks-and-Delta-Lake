@@ -35,7 +35,10 @@ Python and complex SQL queries are used through out the project to load the data
 **Architecture Layers.**
 
 Followed Medallion archtecture to store data in data lake:
+
 <img width="460" height="211" alt="Screenshot 2025-07-19 at 10 10 09 PM" src="https://github.com/user-attachments/assets/6b3c993e-9b7f-42fb-8623-5accfef3f006" />
+
+
 
 **Understanding Data Sources:**
 
@@ -46,47 +49,58 @@ Followed Medallion archtecture to store data in data lake:
 
 We have EMR data of two hispitals in sql database
 EMR data in both hosipitals has tables which include:
-**Departments**(contains department information within hosipital)
+
+**Departments**(contains department information within hosipital).
+
 **Encounters**( contains patients encounter details with hosipital). 
-**Patients**(Contains patients information)
-**Providers **(It contains details of service providers (doctors))
-Schema: (ProviderID,FirstName,LastName,Specialization,DeptID,NPI)
+
+**Patients**(Contains patients information).
+
+**Providers**(It contains details of service providers (doctors)).
+
 **Transactions** (It contains details of transactions made by patient)
-Scema(TransactionID,EncounterID,PatientID,ProviderID,DeptID,VisitDate,ServiceDate,PaidDate,VisitType,Amount,AmountType,PaidAmount,ClaimID,PayorID,ProcedureCode,ICDCode,LineOfBusiness,MedicaidID,MedicareID,InsertDate,ModifiedDate
+
 
 **Claims Data:**
 Data source:( ADLS Gen2)
+
 Some third party insurance company uploads claims data for hosipital a and hosipital b in a folder called landing. This dataset contains detailed information about healthcare insurance claims, including patient visits, billing amounts, payments, and payer details for each submitted claim. There will be two datasets one for each hosipital . These two datasets will be uploaded to adls gen2 in a container called landing.
 Schema(ClaimID,TransactionID,PatientID,EncounterID,ProviderID,DeptID,ServiceDate,ClaimDate,PayorID,ClaimAmount,PaidAmount,ClaimStatus,PayorType,Deductible,Coinsurance,Copay,InsertDate,ModifiedDate)
 
 **CPT (Current Procedural Terminology code) data:**
 **Data source** (ADLS Gen2)
+
 CPT data provides standardized codes used to describe medical procedures and services . Each entry includes the procedure category, CPT code, its description, and the current status of the code. This data is uploaded to landing container of data lake along with claims data.
 Schema (Procedure Code Category,CPT Codes,Procedure Code Descriptions,Code Status)
 
 **ICD (International Classification of Diseases)**
 **Data source** ( website (API) )
+
 It contains standardized codes used to classify diagnoses, symptoms, and medical conditions. Maintained by the World Health Organization (WHO)
 
 **NPI (National Provider Identifier)**
 **Data source** (Website (API) )
+
 It includes a unique 10-digit identification number assigned to healthcare providers and organizations in the U.S. This is issued by CMS (Centers for Medicare & Medicaid Services)
 
 **Loading EMR data from SQL database to bronze layer of ADLS Gen2 using Azure Data Factory:**
 
 EMR data from two different hosipitals is sitting in SQL database. An ETL pipeline is built in Azure data factory to load EMR data from both hosipitals into ADLS Gen2. To build and implement this pipeline a configuration file which contains details like databasename, datasource,  tablename, loadtype, watermark, is_active and target is used. Azure key vault is used to store secrets and this secrets are used while creating linked services in Azure Data Factory.
 
-<img width="680" height="1041" alt="Pasted Graphic 2" src="https://github.com/user-attachments/assets/384b8311-eb02-4f78-bacd-cde2ab1e3da7" />
-
 Above built ETL pipeline starts by iterating over a configuration file to identify the data sources, then checks if data already exists in the sink. If data is found, it is first archived to avoid overwriting. The pipeline then determines the load type—either full or incremental. For a full load, all data is loaded into ADLS and the log file is updated. For incremental loads, it fetches the last load timestamp from the log file, pulls only new or changed records, and then updates the log file accordingly.
 
 <img width="1295" height="986" alt="Pasted Graphic 4" src="https://github.com/user-attachments/assets/9fedd863-cdfd-4457-8273-8a72e1e6bd5a" />
 
 **Mount point in Databricks**:
+
 To load and upload data to ADLS Gen2 from Azure Databricks, a mount point is created using Azure Data Factory. Access key for ADLS Gen2 is accessed in databricks using azure key vault backed secret scope.
+
 NPI and ICD data is fetched from two different websites using web APIs and ingested into the Bronze layer of the data lake.
+
 Claims data and CPT data are initially placed in the landing folder of ADLS Gen2 . Using Azure Data bricks, this raw data is ingested into the Bronze layer for further processing.
+
 Now that all the raw data is available in the Bronze layer of ADLS Gen2, it is further processed and cleaned before being moved to the Silver layer. In the Silver layer, data is transformed, validated, and enriched to ensure consistency and quality.
+
 **Transforming Bronze Data to Silver Layer Using Delta Lake in Azure Databricks:**
 
 CPT data is moved from the bronze layer to the silver layer using Azure Databricks (leveraging the Delta Lakehouse) through SQL queries.
@@ -101,11 +115,13 @@ EMR data from two different hospitals is present in the bronze layer. The EMR da
 We now have cleaned and structured data in the silver layer, making it reliable and ready for downstream use. Data scientists can leverage this curated data to build predictive models, perform advanced analytics, and extract actionable insights for healthcare operations and patient care improvement
 
 **Data Aggregation and Modeling in the Gold Layer:**
+
 The clean data from the silver layer is further aggregated and modeled using star and snowflake schemas, then moved to the gold layer. The gold layer contains well-structured dimension and fact tables derived from the curated data. This refined data is ready for analytics and dashboard development using tools like Power BI or Tableau.
 
 **Further Improvements that can be made to above pipeline:**
 
 --> Currently, the pipeline runs sequentially. It can be optimized to run tasks in parallel, improving performance and reducing overall load time.
+
 --> Add a condition to the configuration logic so that the pipeline only executes when the is_active column is set to 1 in the configuration file. This will allow better control over which tables are processed.
 
 **Conclusion:**
